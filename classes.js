@@ -21,9 +21,11 @@ class Graphics {
 
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         Graphics.vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, Graphics.vertexBuffer);
         const positionAttrib = gl.getAttribLocation(shaderProgram, "position");
         gl.vertexAttribPointer(positionAttrib, Graphics.elementsPerVertex, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(positionAttrib);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     }
  
     static CompileShader(shaderType, shaderSource) {
@@ -37,8 +39,10 @@ class Graphics {
         return shader;
     }
     static Render() {
+        if(Graphics.vertices.length < 1)
+            return;
         let gl = Graphics.gl;
-        gl.bindBuffer(gl.ARRAY_BUFFER, Graphics.vertexBuffer);
+        //gl.bindBuffer(gl.ARRAY_BUFFER, Graphics.vertexBuffer);
         //@todo:find way to not be making a new Float32Array here
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(Graphics.vertices), gl.DYNAMIC_DRAW);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);

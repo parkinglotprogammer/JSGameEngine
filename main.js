@@ -2,13 +2,13 @@ const targetFrameRate = 60;
 const targetFrameTime = 1000 / targetFrameRate;
 let lastTimestamp = 0;
 let quit = false;
-let interval;
+let gameUpdateInterval;
 var counter = 0;
 Start();
 
 
 function Start() {
-    interval = setInterval(GameUpdate,targetFrameTime);
+    gameUpdateInterval = setInterval(GameUpdate,targetFrameTime);
     requestAnimationFrame(GraphicsUpdate);
 }
 function GraphicsUpdate(){
@@ -19,12 +19,13 @@ function GraphicsUpdate(){
 function GameUpdate() {
     // Calculate elapsed time since the last frame
     //const deltaTime = timestamp - lastTimestamp;
-
-    counter++;
+    quit = counter++ >= 50;
     // Request the next frame
     console.log(counter);
-        
+    if(quit)
+        Quit();
 }
 function Quit() {
+    clearInterval(gameUpdateInterval);
     console.log("Game Quit");
 }
