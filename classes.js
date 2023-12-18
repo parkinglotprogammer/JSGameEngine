@@ -103,6 +103,94 @@ class Vector3 {
         Vector3.Forward = Object.freeze(new Vector3(0, 0, 1));
         Vector3.Backward = Object.freeze(new Vector3(0, 0, -1));
     }
+    Add(otherVec) {
+        return new Vector3(
+            this.x + otherVec.x,
+            this.y + otherVec.y,
+            this.z + otherVec.z
+        );
+    }
+    MutateAdd(otherVec) {
+        this.x += otherVec.x;
+        this.y += otherVec.y;
+        this.z += otherVec.z;
+    }
+    Subtract(otherVec) {
+        return new Vector3(
+            this.x - otherVec.x,
+            this.y - otherVec.y,
+            this.z - otherVec.z
+        );
+    }
+    MutateSubtract(otherVec) {
+        this.x -= otherVec.x;
+        this.y -= otherVec.y;
+        this.z -= otherVec.z;
+    }
+    Multiply(number) {
+        return new Vector3(
+            this.x * number,
+            this.y * number,
+            this.z * number
+        );
+    }
+    MutateMultiply(number) {
+        this.x *= number;
+        this.y *= number;
+        this.z *= number;
+    }
+    Divide(number) {
+        return new Vector3(
+            this.x / number,
+            this.y / number,
+            this.z / number
+        );
+    }
+    MutateDivide(number) {
+        this.x /= number;
+        this.y /= number;
+        this.z /= number;
+    }
+    Dot(otherVec) {
+        return this.x * otherVec.x + this.y * otherVec.y + this.z * otherVec.z;
+    }
+    Cross(otherVec) {
+        return new Vector3(
+            this.y * otherVec.z - this.z * otherVec.y,
+            this.z * otherVec.x - this.x * otherVec.z,
+            this.x * otherVec.y - this.y * otherVec.x
+        );
+    }
+    SquareMagnitude() {
+        return this.x * this.x + this.y * this.y + this.z * this.z;
+    }
+    Magnitude() {
+        return Math.sqrt(this.SquareMagnitude());
+    }
+    SquareDistance(otherVec) {
+        return (this.x - otherVec.x) * (this.x - otherVec.x) +
+            (this.y - otherVec.y) * (this.y - otherVec.y) +
+            (this.z - otherVec.z) * (this.z - otherVec.z);
+    }
+    Distance(otherVec) {
+        return Math.sqrt(this.SquareDistance(otherVec));
+    }
+    static Dot(firstVector, secondVector) {
+        return firstVector.x * secondVector.x + firstVector.y * secondVector.y + firstVector.z * secondVector.z;
+    }
+    static Cross(firstVec, secondVec) {
+        return new Vector3(
+            firstVec.y * secondVec.z - firstVec.z * secondVec.y,
+            firstVec.z * secondVec.x - firstVec.x * secondVec.z,
+            firstVec.x * secondVec.y - firstVec.y * secondVec.x
+        );
+    }
+    static SquareDistance(firstVec, secondVec) {
+        return firstVec.SquareDistance(secondVec);
+    }
+    static Distance(firstVec, secondVec) {
+        return Math.sqrt(firstVec.SquareDistance(secondVec));
+    }
 }
 class Input {
     static {
@@ -127,7 +215,6 @@ class Input {
         for (var key in Input.keyMap)
             Input.priorKeyMap[key] = Input.keyMap[key];
     }
-
     static GetKeyDown(key) {
         return Input.keyMap[key] && Input.priorKeyMap[key] == false;
     }
