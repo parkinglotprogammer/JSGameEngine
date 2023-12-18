@@ -175,6 +175,21 @@ class Vector3 {
     Distance(otherVec) {
         return Math.sqrt(this.SquareDistance(otherVec));
     }
+    MutateNormalize() {
+        let magnitude = this.Magnitude();
+        this.x /= magnitude;
+        this.y /= magnitude;
+        this.z /= magnitude;
+    }
+    Normalize() {
+        let magnitude = this.Magnitude();
+        return new Vector3(
+            this.x / magnitude,
+            this.y / magnitude,
+            this.z / magnitude
+        );
+       
+    }
     static Dot(firstVector, secondVector) {
         return firstVector.x * secondVector.x + firstVector.y * secondVector.y + firstVector.z * secondVector.z;
     }
