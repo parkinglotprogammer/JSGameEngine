@@ -1,8 +1,13 @@
 class Graphics {
     static elementsPerVertex = 4;
     static {
-        let canvas = document.querySelector("#glcanvas");
-        let gl = canvas.getContext("webgl2");
+        //Hide scrollbars, remove margin and padding
+        document.body.style.overflow = 'hidden';
+        document.body.style.margin = 0;
+        document.body.style.padding = 0;
+
+        Graphics.canvas = document.querySelector("#glcanvas");
+        let gl = Graphics.canvas.getContext("webgl2");
         Graphics.gl = gl;
         Graphics.vertices = [];
         Graphics.vertexShader = Graphics.CompileShader(gl.VERTEX_SHADER, vertexShader);
@@ -20,6 +25,9 @@ class Graphics {
         gl.vertexAttribPointer(positionAttrib, Graphics.elementsPerVertex, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(positionAttrib);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        window.addEventListener("resize", Graphics.Resize);
+        Graphics.Resize();
     }
 
     static CompileShader(shaderType, shaderSource) {
@@ -43,6 +51,12 @@ class Graphics {
     }
     static DrawTriangle() {
         Graphics.vertices.push();
+    }
+    static Resize() {
+        Graphics.canvas.width = Graphics.width = window.innerWidth;
+        Graphics.canvas.height = Graphics.height = window.innerHeight;
+        Graphics.gl.viewport(0, 0, Graphics.width, Graphics.height);
+        Graphics.gl.clear(Graphics.gl.COLOR_BUFFER_BIT | Graphics.gl.DEPTH_BUFFER_BIT);
     }
 }
 
@@ -76,10 +90,12 @@ class Game {
     static Update() {
         // Calculate elapsed time since the last frame
         const thisTime = performance.now();
+      
         Game.deltaTime = thisTime - Game.lastTime;
         Game.lastTime = thisTime;
         Update(Game.deltaTime);
         Input.LateUpdate();
+      
     }
     static Quit() {
         Game.quit = true;
@@ -211,9 +227,10 @@ class Input {
     static {
         Input.keyMap = [];
         Input.priorKeyMap = [];
-        Input.mousePosition;
-        Input.priorMousePosition;
-        //Initialize all keys as not being previously held down.
+        Input.mousePosition = new Vector3();
+        Input.priorMousePosition = new Vector3();
+        Input.mouseDelta = new Vector3();
+        //Initialize all keys as not being held down previously.
         for (let i = 0; i < 256; i++)
             Input.priorKeyMap[String.fromCharCode(i)] = false;
         document.addEventListener('keydown', (event) => {
@@ -223,12 +240,22 @@ class Input {
             Input.keyMap[event.key] = false;
         }, false);
         document.addEventListener('mousemove', (event) => {
-            //console.log(`x:${event.x},y:${event.y}`);
+            // Input.priorMousePosition.x = Input.mousePosition.x;
+            // Input.priorMousePosition.y = Input.mousePosition.y;
+            Input.mousePosition.x = event.x;
+            Input.mousePosition.y = event.y;
         }, false);
     }
     static LateUpdate() {
         for (var key in Input.keyMap)
             Input.priorKeyMap[key] = Input.keyMap[key];
+        //@todo: I dunno if the mouse delta functions should be in lateupdate,
+        //or if I should make an early Update for them. We'll see when I start using it for mouselook!
+        Input.mouseDelta.x = Input.mousePosition.x - Input.priorMousePosition.x;
+        Input.mouseDelta.y = Input.mousePosition.y - Input.priorMousePosition.y;
+        Input.priorMousePosition.x = Input.mousePosition.x;
+        Input.priorMousePosition.y = Input.mousePosition.y;
+        
     }
     static GetKeyDown(key) {
         return Input.keyMap[key] && Input.priorKeyMap[key] == false;
