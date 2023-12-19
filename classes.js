@@ -90,17 +90,23 @@ class Game {
     static Update() {
         // Calculate elapsed time since the last frame
         const thisTime = performance.now();
-      
+
         Game.deltaTime = thisTime - Game.lastTime;
         Game.lastTime = thisTime;
         Update(Game.deltaTime);
         Input.LateUpdate();
-      
+
     }
     static Quit() {
         Game.quit = true;
         Quit();
         clearInterval(Game.updateInterval);
+    }
+}
+class MyMath {
+    static {
+        MyMath.DegreesToRadians = Math.PI / 180;
+        MyMath.RadiansToDegrees = 180 / Math.PI;
     }
 }
 class Vector3 {
@@ -204,7 +210,7 @@ class Vector3 {
             this.y / magnitude,
             this.z / magnitude
         );
-       
+
     }
     static Dot(firstVector, secondVector) {
         return firstVector.x * secondVector.x + firstVector.y * secondVector.y + firstVector.z * secondVector.z;
@@ -223,6 +229,101 @@ class Vector3 {
         return Math.sqrt(firstVec.SquareDistance(secondVec));
     }
 }
+class Matrix4x4 {
+    constructor() {
+        // Initialize as the identity matrix
+        this.data = [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]
+        ];
+    }
+    SetAsIdentityMatrix() {
+        inputMatrix[0][1] = inputMatrix[0][2] = inputMatrix[0][2] = inputMatrix[0][3] =
+            inputMatrix[1][0] = inputMatrix[1][2] = inputMatrix[1][2] = inputMatrix[1][3] =
+            inputMatrix[2][0] = inputMatrix[2][1] = inputMatrix[2][2] = inputMatrix[2][3] =
+            inputMatrix[3][0] = inputMatrix[3][1] = inputMatrix[3][2] = inputMatrix[3][2] = 0;
+        inputMatrix[0][0] = inputMatrix[1][1] = inputMatrix[2][2] = inputMatrix[3][3] = 1;
+    }
+    // Method to multiply this matrix by another matrix
+    Multiply(matrix) {
+        const result = new Matrix4x4();
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+                result.data[i][j] =
+                    this.data[i][0] * matrix.data[0][j] +
+                    this.data[i][1] * matrix.data[1][j] +
+                    this.data[i][2] * matrix.data[2][j] +
+                    this.data[i][3] * matrix.data[3][j];
+            }
+        }
+        return result;
+    }
+    //@todo:this method need optimization to not use so many arrays
+    MultiplyVector3(vector) {
+        // Convert Vector3 to Vector4 by adding a homogeneous coordinate (w = 1)
+        const vector4 = [vector.x, vector.y, vector.z, 1];
+
+        // Perform matrix multiplication
+        const result = [0, 0, 0, 0];
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+                result[i] += this.data[i][j] * vector4[j];
+            }
+        }
+
+        // Convert the result back to a Vector3
+        const w = result[3];
+        if (w !== 0) {
+            return new Vector3(result[0] / w, result[1] / w, result[2] / w);
+        } else {
+            // Handle division by zero or w = 0 case
+            console.error('Division by zero or w = 0');
+            return null;
+        }
+    }
+    Translate(x, y, z) {
+        const translationMatrix = new Matrix4x4();
+        translationMatrix.data[0][3] = x;
+        translationMatrix.data[1][3] = y;
+        translationMatrix.data[2][3] = z;
+        return this.Multiply(translationMatrix);
+    }
+    Scale(x = 1, y = 1, z = 1) {
+        const scaleMatrix = new Matrix4x4();
+        scaleMatrix.data[0][0] = x;
+        scaleMatrix.data[1][1] = y;
+        scaleMatrix.data[2][2] = z;
+
+        return this.Multiply(scaleMatrix);
+    }
+
+    //@todo: probably lots of optimization to do here to combine all 3 rotations into one operation
+    Rotate(angle, axis) {
+        const rotationMatrix = new Matrix4x4();
+        const cos = Math.cos(angle * MyMath.DegreesToRadians);
+        const sin = Math.sin(angle * MyMath.DegreesToRadians);
+        const oneMinusCos = 1 - cos;
+
+        const normalized = axis.Normalize(); // Assuming you have a Vector3 class with a normalize method
+
+        rotationMatrix.data[0][0] = cos + normalized.x * normalized.x * oneMinusCos;
+        rotationMatrix.data[0][1] = normalized.x * normalized.y * oneMinusCos - normalized.z * sin;
+        rotationMatrix.data[0][2] = normalized.x * normalized.z * oneMinusCos + normalized.y * sin;
+
+        rotationMatrix.data[1][0] = normalized.y * normalized.x * oneMinusCos + normalized.z * sin;
+        rotationMatrix.data[1][1] = cos + normalized.y * normalized.y * oneMinusCos;
+        rotationMatrix.data[1][2] = normalized.y * normalized.z * oneMinusCos - normalized.x * sin;
+
+        rotationMatrix.data[2][0] = normalized.z * normalized.x * oneMinusCos - normalized.y * sin;
+        rotationMatrix.data[2][1] = normalized.z * normalized.y * oneMinusCos + normalized.x * sin;
+        rotationMatrix.data[2][2] = cos + normalized.z * normalized.z * oneMinusCos;
+
+        return this.Multiply(rotationMatrix);
+    }
+}
+
 class Input {
     static {
         Input.keyMap = [];
@@ -255,12 +356,63 @@ class Input {
         Input.mouseDelta.y = Input.mousePosition.y - Input.priorMousePosition.y;
         Input.priorMousePosition.x = Input.mousePosition.x;
         Input.priorMousePosition.y = Input.mousePosition.y;
-        
+
     }
     static GetKeyDown(key) {
         return Input.keyMap[key] && Input.priorKeyMap[key] == false;
     }
     static GetKey(key) {
         return Input.keyMap[key];
+    }
+}
+
+class Transform {
+    constructor(position = new Vector3(), rotation = new Vector3(), scale = new Vector3(1, 1, 1)) {
+        this.position = position;
+        this.rotation = rotation;
+        this.scale = scale;
+        this.matrix = new Matrix4x4();
+    }
+    GetTrsMatrix(inputMatrix) {
+        inputMatrix.SetAsIdentityMatrix();
+        inputMatrix.Translate(this.position.x, this.position.y, this.position.z);
+        inputMatrix.Rotate(this.rotation.x, Vector3.Left);
+        inputMatrix.Rotate(this.rotation.y, Vector3.Up);
+        inputMatrix.Rotate(this.rotation.z, Vector3.Forward);
+        inputMatrix.Scale(this.scale.x, this.scale.y, this.scale.z);
+    }
+}
+class Mesh {
+    constructor(vertices, indices) {
+        this.vertices = vertices;
+        this.indices = indices;
+    }
+    static {
+        Mesh.plane = new Mesh(
+            [
+                new Vector3(0, 0, 0),
+                new Vector3(1, 0, 0),
+                new Vector3(1, 0, 1),
+                new Vector3(0, 0, 1)
+            ],
+            [
+                0, 1, 2,
+                2, 3, 0
+            ]
+        );
+    }
+}
+class Object3D {
+    constructor(mesh, position = new Vector3(), rotation = new Vector3(), scale = new Vector3(1, 1, 1)) {
+        this.transform = new Transform(position, rotation, scale);
+        this.mesh = mesh;
+    }
+    static {
+        Object3D.plane = new Object3D(Mesh.plane);
+    }
+}
+class Player {
+    constructor(position) {
+
     }
 }
