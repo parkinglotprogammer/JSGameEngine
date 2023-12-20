@@ -1,5 +1,4 @@
 class Graphics {
-    static elementsPerVertex = 4;
     static {
         //Hide scrollbars, remove margin and padding
         document.body.style.overflow = 'hidden';
@@ -10,6 +9,7 @@ class Graphics {
         let gl = Graphics.canvas.getContext("webgl2");
         Graphics.gl = gl;
         Graphics.vertices = [];
+        Graphics.elementsPerVertex = 4;
         Graphics.vertexShader = Graphics.CompileShader(gl.VERTEX_SHADER, vertexShader);
         Graphics.fragShader = Graphics.CompileShader(gl.FRAGMENT_SHADER, fragShader);
         let shaderProgram = gl.createProgram();
@@ -91,7 +91,7 @@ class Game {
         // Calculate elapsed time since the last frame
         const thisTime = performance.now();
 
-        Game.deltaTime = thisTime - Game.lastTime;
+        Game.deltaTime = (thisTime - Game.lastTime)/1000;
         Game.lastTime = thisTime;
         Update(Game.deltaTime);
         Input.LateUpdate();
@@ -283,7 +283,7 @@ class Matrix4x4 {
             return null;
         }
     }
-    Translate(x, y, z) {
+    Translate(x = 0, y = 0, z = 0) {
         const translationMatrix = new Matrix4x4();
         translationMatrix.data[0][3] = x;
         translationMatrix.data[1][3] = y;
@@ -371,9 +371,45 @@ class Transform {
         this.position = position;
         this.rotation = rotation;
         this.scale = scale;
-        this.matrix = new Matrix4x4();
+    }
+    Move(x,y,z) {
+        this.position.x += x;
+        this.position.y += y;
+        this.position.z += z;
+    }
+    Rotate(x,y,z) {
+        this.rotation.x += x;
+        this.rotation.y += y;
+        this.rotation.z += z;
+    }
+    Scale(x,y,z) {
+        this.scale.x += x;
+        this.scale.y += y;
+        this.scale.z += z;
+    }
+    SetPosition(x,y,z) {
+        this.position.x = x;
+        this.position.y = y;
+        this.position.z = z;
+    }
+    SetRotation(x,y,z) {
+        this.rotation.x = x;
+        this.rotation.y = y;
+        this.rotation.z = z;
+    }
+    SetScale(x,y,z) {
+        this.scale.x = x;
+        this.scale.y = y;
+        this.scale.z = z;
     }
     GetTrsMatrix(inputMatrix) {
+        inputMatrix.Translate(this.position.x, this.position.y, this.position.z);
+        inputMatrix.Rotate(this.rotation.x, Vector3.Left);
+        inputMatrix.Rotate(this.rotation.y, Vector3.Up);
+        inputMatrix.Rotate(this.rotation.z, Vector3.Forward);
+        inputMatrix.Scale(this.scale.x, this.scale.y, this.scale.z);
+    }
+    ResetGetTrsMatrix(inputMatrix) {
         inputMatrix.SetAsIdentityMatrix();
         inputMatrix.Translate(this.position.x, this.position.y, this.position.z);
         inputMatrix.Rotate(this.rotation.x, Vector3.Left);
@@ -413,6 +449,52 @@ class Object3D {
 }
 class Player {
     constructor(position) {
-
+        this.transform = new Transform(position);
+        this.movementSpeed = 3;
+        //@todo: maybe put forward in transform class..
+        //but does every object really need a forward direction?
+        //perhaps we make an entity class, which is basically
+        //an object that has a looking rotation used for players and mobs
+        //and stuff
+        this.forward = new Vector3(0,0,1);
+    }
+    Update(deltaTime) {
+        let movementAmount = this.movementSpeed*deltaTime;
+        if(Input.GetKey("w")) {
+            this.transform.position.x += this.forward.x * movementAmount;
+            this.transform.position.y += this.forward.y * movementAmount;
+            this.transform.position.z += this.forward.z * movementAmount;
+        }
+        if(Input.GetKey("s")){
+            this.transform.position.x -= this.forward.x * movementAmount;
+            this.transform.position.y -= this.forward.y * movementAmount;
+            this.transform.position.z -= this.forward.z * movementAmount;
+        }
+    }
+}
+class SceneTree {
+ /*
+ This class should be used to subdivide the world by the objects it contains,
+ to reduce the number of operations the camera has to do. Should be responsible for frustum
+ culling, occlusion culling, etc
+ */
+}
+class Camera{
+    constructor(transform = new Transform(), offset = new Vector3()) {
+        this.transform = transform;
+        this.offset = offset;
+    }
+    Render(objectsToRender) {
+        let viewMatrix = new Matrix4x4();
+        let objectMatrix = new Matrix4x4();
+        viewMatrix.Translate(this.offset.x,this.offset.y,this.offset.z);
+        this.transform.GetTrsMatrix(viewMatrix);
+        for(const object of objectsToRender) {
+            object.transform.ResetGetTrsMatrix(objectMatrix)
+            //iterate it's triangles
+            //transform them to view space
+            //clip them
+            //draw them
+        }
     }
 }
