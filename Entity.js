@@ -1,14 +1,16 @@
 class World {
     static {
         World.tables = new Map();
-        World.componentConstructors = [];
+        World.componentConstructors = new Map();
     }
     static CreateComponent(componentType, args) {
-        return new World.componentConstructors[componentType](...args);
+        if(args != null )
+            return new (World.componentConstructors.get(componentType))(...args);
+        return new (World.componentConstructors.get(componentType))();
     }
     static InsertEntityIntoArchetypeTable(entity, data) {
         if (!World.tables.has(entity.components))
-            World.tables.set(entity.components, [0]);
+            World.tables.set(entity.components, []);
         World.tables.get(entity.components).push(data);
     }
     static RemoveEntityFromArchetypeTable(entity) {
@@ -37,11 +39,20 @@ class Component {
         Component.ID = 0;
     }
 }
+class TestComponent {
+    static {
+        TestComponent.ID = Component.ID++;
+        Object.freeze(TestComponent.ID);
+        World.componentConstructors.set(this,this);
+    }
+    constructor() {
+    }
+}
 class PositionComponent {
     static {
         PositionComponent.ID = Component.ID++;
         Object.freeze(PositionComponent.ID);
-        World.componentConstructors.push(PositionComponent);
+        World.componentConstructors.set(this,this);
     }
 
     constructor(x, y, z) {
@@ -54,7 +65,7 @@ class VelocityComponent {
     static {
         VelocityComponent.ID = Component.ID++;
         Object.freeze(VelocityComponent.ID);
-        World.componentConstructors.push(VelocityComponent);
+        World.componentConstructors.set(this,this);
     }
     constructor(x, y, z) {
         this.x = x;
@@ -62,6 +73,7 @@ class VelocityComponent {
         this.z = z;
     }
 }
+
 class Entity {
     static {
         this.ids = 0;
@@ -72,11 +84,12 @@ class Entity {
         this.components = [];
     }
     AddComponent(componentID, args) {
-        if (this.components.includes(componentID)) {
+        let componentStaticID = componentID.ID;
+        if (this.components.includes(componentStaticID)) {
             console.log("This entity already has that component");
             return false;
         }
-        this.components.push(componentID);
+        this.components.push(componentStaticID);
         this.components.sort((a, b) => a - b);
         let existingEntityData = World.GetEntityFromTable(this);
         if (existingEntityData == null) {
@@ -88,6 +101,7 @@ class Entity {
             existingEntityData.data.sort((a, b) => a.constructor.ID - b.constructor.ID);
             World.RemoveEntityFromArchetypeTable(this);
         }
+
         World.InsertEntityIntoArchetypeTable(this, existingEntityData);
         return true;
     }
@@ -120,7 +134,7 @@ class Entity {
     GetComponent(componentID) {
         let existingEntityData = World.GetEntityFromTable(this);
         for (let i = 0; i < existingEntityData.data.length; i++)
-            if (existingEntityData.data[i].constructor.ID === componentID) 
+            if (existingEntityData.data[i].constructor === componentID) 
                return existingEntityData.data[i];
         return null;
     }

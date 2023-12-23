@@ -6,10 +6,12 @@ function Start() {
     var ent = new Entity();
     var ent2 = new Entity();
    
-    ent.AddComponent(VelocityComponent.ID, [1,2,3]);
-    ent.AddComponent(PositionComponent.ID, [3,3,3]);
-    //ent.RemoveComponent(0);
-    let posComponenet = ent.GetComponent(PositionComponent.ID);
+   
+    ent.AddComponent(VelocityComponent, [1,2,3]);
+    ent.AddComponent(PositionComponent, [3,3,3]);
+    ent.AddComponent(TestComponent);
+    //ent.RemoveComponent(1);
+    let posComponenet = ent.GetComponent(PositionComponent);
     console.log(posComponenet);
     posComponenet.x = -5;
     console.log(World.GetEntityFromTable(ent));
