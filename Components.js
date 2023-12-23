@@ -16,9 +16,12 @@ class Mesh {
             ]
         );
     }
-    constructor(vertices, indices) {
-        this.vertices = vertices;
-        this.indices = indices;
+    constructor() {
+        this.x = 0;
+        this.y = 0;
+        this.z = 0;
+        // this.vertices = vertices;
+        // this.indices = indices;
     }
 }
 class Transform {
@@ -27,5 +30,8 @@ class Transform {
         Object.freeze(Transform.ID);
     }
     constructor() {
+        this.x = 0;
+        this.y = 0;
+        this.z = 0;
     }
 }

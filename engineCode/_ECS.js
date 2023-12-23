@@ -1,6 +1,6 @@
 class World {
     static {
-        World.archetypesTables = {};
+        World.archetypesTables = [[]];
     }
     static CreateArchetype() {
         let archetype = [];
@@ -14,34 +14,29 @@ class World {
         let tableStack = [World.archetypesTables];
         while (tableStack.length > 0) {
             let table = tableStack.pop();
-            const tableKeys = Object.keys(table);
-            for (let index in tableKeys) {
-                let tableKey = Number(tableKeys[index]);
-                if (isNaN(tableKey) || tableKey < highestcomponentType)
-                    continue;
-                let value = table[tableKey];
-                if (tableKey > highestcomponentType) {
-                    tableStack.push(value);
-                    continue;
-                }
-                value = World._DrillDownToCorrectTableFromArchetype(archetype.slice(0,-1),value);
-                for (const entity in value.entities)
-                    yield value.entities[entity];
+            for(let index = highestcomponentType+1; index < table.length; index++){
+                tableStack.push(table[index]);
+            }
+            if(table[highestcomponentType] != null) {
+                let currentTable = table[highestcomponentType];
+                currentTable = World._DrillDownToCorrectTableFromArchetype(archetype.slice(0,-1),currentTable);
+                yield currentTable[0];
+                // let entities = currentTable[0];
+                // for(let i = 0; i < entities.length; i++)
+                //     yield entities[i];
             }
         }
     }
     static InsertEntityIntoArchetypeTable(entityArchetype, entityData) {
         let archetypeCopy = [...entityArchetype];
         let currentObject = World.archetypesTables;
-        //This is essentially the DrillDown method but we need to insert emptys
-        //as we go if they don't exist yet.
         while (archetypeCopy.length > 0) {
             let index = archetypeCopy.pop();
-            if (currentObject[index] == null)
-                currentObject[index] = { entities: [] };
+            if(currentObject[index] == null)
+                currentObject[index] = [[]];
             currentObject = currentObject[index];
         }
-        currentObject.entities.push(entityData);
+        currentObject[0].push(entityData);
     }
     static _DrillDownToCorrectTableFromArchetype(archetype, table) {
         while (archetype.length > 0) {
@@ -57,30 +52,41 @@ class World {
         if (entity.archetype.length < 1)
             return false;
         let table = World._DrillDownToCorrectTableFromArchetype([...entity.archetype],World.archetypesTables);
-        for (let i = 0; i < table.entities.length; i++) {
-            if (table.entities[i].id == entity.id) {
-                table.entities[i] = table.entities[table.entities.length - 1];
-                table.entities.pop();
+        let entities = table[0];
+        for(let i =0; i < entities.length; i++) {
+            let ent = entities[i];
+            if(ent[0] == entity.id) {
+                entities[i] = entities[entities.length -1];
+                entities.pop();
                 return true;
             }
         }
+        // for (let i = 0; i < table[0].length; i++) {
+        //     if (table[0][i][0] == entity.id) {
+        //         table[0][i] = table[0][table[0].length - 1];
+        //         table[0].pop();
+        //         return true;
+        //     }
+        // }
         return false;
     }
     static GetEntityFromTable(entity) {
         if (entity.archetype.length < 1)
             return null;
-        let object = World._DrillDownToCorrectTableFromArchetype([...entity.archetype], World.archetypesTables);
+        let table = World._DrillDownToCorrectTableFromArchetype([...entity.archetype], World.archetypesTables);
         //@todo: this is 0(n) performance, but if we kept the tables sorted we could acheive better
         //, at the cost of sorting the tables obviously
-        for (const entityData of object.entities)
-            if (entityData.id == entity.id)
-                return entityData;
+        let entities = table[0];
+        for(let ent of entities){
+            if(ent[0] == entity.id)
+                return ent;
+        }
         return null;
     }
 }
 class Component {
     static {
-        Component.ID = 0;
+        Component.ID = 1;
     }
 }
 class Entity {
@@ -92,22 +98,24 @@ class Entity {
         Object.freeze(this.id);
         this.archetype = [];
     }
-    AddComponent(component) {
-        let componentStaticID = component.constructor.ID;
+    AddComponent(componentConstructor) {
+        let componentStaticID = componentConstructor.ID;
         if (this.archetype.includes(componentStaticID))
-            return false;
+            return null;
         let existingEntityData = World.GetEntityFromTable(this);
-        if (existingEntityData == null)
-            existingEntityData = { id: this.id, data: [component] };
+        if (existingEntityData == null) {
+            existingEntityData = [this.id, [new componentConstructor()]];
+        }
         else {
             World.RemoveEntityFromArchetypeTable(this);
-            existingEntityData.data.push(component);
-            existingEntityData.data.sort((a, b) => a.constructor.ID - b.constructor.ID);
+            existingEntityData[1].push(new componentConstructor());
+            existingEntityData[1].sort((a, b) => a.constructor.ID - b.constructor.ID);
         }
         this.archetype.push(componentStaticID);
         this.archetype.sort((a, b) => a - b);
+        let indexOfAddedComponenet = this.archetype.findIndex((x) => x == componentStaticID);
         World.InsertEntityIntoArchetypeTable(this.archetype, existingEntityData);
-        return true;
+        return existingEntityData[1][indexOfAddedComponenet];
     }
     RemoveComponent(componentType) {
         let staticcomponentType = componentType.ID;
@@ -123,7 +131,7 @@ class Entity {
         let existingEntityData = World.GetEntityFromTable(this);
         if (existingEntityData != null)
             World.RemoveEntityFromArchetypeTable(this);
-        let data = existingEntityData.data;
+        let data = existingEntityData[1];
         for (let i = 0; i < data.length; i++) {
             if (data[i].constructor.ID === componentType) {
                 for (; i < data.length; i++)
@@ -140,9 +148,9 @@ class Entity {
     }
     GetComponent(componentType) {
         let existingEntityData = World.GetEntityFromTable(this);
-        for (let i = 0; i < existingEntityData.data.length; i++)
-            if (existingEntityData.data[i].constructor === componentType)
-                return existingEntityData.data[i];
+        for (let i = 0; i < existingEntityData[1].length; i++)
+            if (existingEntityData[1][i].constructor === componentType)
+                return existingEntityData[1][i];
         return null;
     }
 }
