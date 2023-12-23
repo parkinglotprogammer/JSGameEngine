@@ -10,11 +10,12 @@ function Start() {
     ent.AddComponent(VelocityComponent, [1,2,3]);
     ent.AddComponent(PositionComponent, [3,3,3]);
     ent.AddComponent(TestComponent);
-    //ent.RemoveComponent(1);
-    let posComponenet = ent.GetComponent(PositionComponent);
-    console.log(posComponenet);
-    posComponenet.x = -5;
-    console.log(World.GetEntityFromTable(ent));
+    ent.RemoveComponent(1);
+    // let posComponenet = ent.GetComponent(PositionComponent);
+    // console.log(posComponenet);
+    // posComponenet.x = -5;
+    //console.log(World.GetEntityFromTable(ent));
+    console.log(World.tables);
 }
 function Update(deltaTime) {
     if (Input.GetKeyDown("q"))

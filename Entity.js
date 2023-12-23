@@ -1,12 +1,6 @@
 class World {
     static {
         World.tables = new Map();
-        World.componentConstructors = new Map();
-    }
-    static CreateComponent(componentType, args) {
-        if(args != null )
-            return new (World.componentConstructors.get(componentType))(...args);
-        return new (World.componentConstructors.get(componentType))();
     }
     static InsertEntityIntoArchetypeTable(entity, data) {
         if (!World.tables.has(entity.components))
@@ -28,9 +22,8 @@ class World {
         table.pop();
     }
     static GetEntityFromTable(entity) {
-        if (!World.tables.has(entity.components)) {
+        if (!World.tables.has(entity.components))
             return null;
-        }
         return World.tables.get(entity.components).find(obj => obj.id === entity.id);
     }
 }
@@ -39,20 +32,11 @@ class Component {
         Component.ID = 0;
     }
 }
-class TestComponent {
-    static {
-        TestComponent.ID = Component.ID++;
-        Object.freeze(TestComponent.ID);
-        World.componentConstructors.set(this,this);
-    }
-    constructor() {
-    }
-}
+
 class PositionComponent {
     static {
         PositionComponent.ID = Component.ID++;
         Object.freeze(PositionComponent.ID);
-        World.componentConstructors.set(this,this);
     }
 
     constructor(x, y, z) {
@@ -65,12 +49,19 @@ class VelocityComponent {
     static {
         VelocityComponent.ID = Component.ID++;
         Object.freeze(VelocityComponent.ID);
-        World.componentConstructors.set(this,this);
     }
     constructor(x, y, z) {
         this.x = x;
         this.y = y;
         this.z = z;
+    }
+}
+class TestComponent {
+    static {
+        TestComponent.ID = Component.ID++;
+        Object.freeze(TestComponent.ID);
+    }
+    constructor() {
     }
 }
 
@@ -85,23 +76,19 @@ class Entity {
     }
     AddComponent(componentID, args) {
         let componentStaticID = componentID.ID;
-        if (this.components.includes(componentStaticID)) {
-            console.log("This entity already has that component");
+        if (this.components.includes(componentStaticID))
             return false;
-        }
+        let existingEntityData = World.GetEntityFromTable(this);
+        let newComponent = args ?  new componentID(...args) :  new componentID();
         this.components.push(componentStaticID);
         this.components.sort((a, b) => a - b);
-        let existingEntityData = World.GetEntityFromTable(this);
-        if (existingEntityData == null) {
-            existingEntityData = { id: this.id, data: [] };
-            existingEntityData.data.push(World.CreateComponent(componentID, args));
-        }
+        if (existingEntityData == null)
+            existingEntityData = { id: this.id, data: [newComponent] };
         else {
-            existingEntityData.data.push(World.CreateComponent(componentID, args));
-            existingEntityData.data.sort((a, b) => a.constructor.ID - b.constructor.ID);
             World.RemoveEntityFromArchetypeTable(this);
+            existingEntityData.data.push(newComponent);
+            existingEntityData.data.sort((a, b) => a.constructor.ID - b.constructor.ID);
         }
-
         World.InsertEntityIntoArchetypeTable(this, existingEntityData);
         return true;
     }
@@ -120,12 +107,12 @@ class Entity {
         if (existingEntityData != null)
             World.RemoveEntityFromArchetypeTable(this);
         this.components.pop();
-        let entityData = existingEntityData.data;
-        for (let i = 0; i < entityData.length; i++) {
-            if (entityData[i].constructor.ID === componentID) {
-                for(;i<entityData.length;i++)
-                    entityData[i] = entityData[i+1]
-                entityData.pop();
+        let data = existingEntityData.data;
+        for (let i = 0; i < data.length; i++) {
+            if (data[i].constructor.ID === componentID) {
+                for(;i<data.length;i++)
+                data[i] = data[i+1]
+                data.pop();
             }
         }
         World.InsertEntityIntoArchetypeTable(this, existingEntityData);
